@@ -7,12 +7,13 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="app" class="zone-shallow">
+    <div id="app" class="zone-shallows">
       <header class="topbar">
         <h1>Deepwell</h1>
         <div class="economy">
           <span id="currency">₵ 0</span>
           <button id="sellAllBtn" class="ghost">Sell Catch</button>
+          <button id="changelogBtn" class="ghost">Changelog</button>
         </div>
       </header>
 
@@ -23,13 +24,12 @@
             <div class="depth-particles" id="depthParticles"></div>
             <div class="line" id="line"></div>
             <div class="hook" id="hook"></div>
-            <div class="zone-label" id="zoneLabel">Shallow Waters</div>
+            <div class="zone-label" id="zoneLabel">Shallows</div>
           </div>
           <div class="controls">
             <button id="castBtn" class="primary">Cast</button>
             <button id="reelBtn" class="secondary" disabled>Reel In</button>
-            <button id="upgradeRodBtn" class="ghost">Upgrade Rod</button>
-            <button id="upgradeLuckBtn" class="ghost">Increase Luck</button>
+            <button id="openRodShopBtn" class="ghost">Rod Shop</button>
           </div>
         </section>
 
@@ -53,6 +53,16 @@
           </div>
 
           <div class="card">
+            <label>Biome</label>
+            <div id="biomeInfo">Shallows</div>
+          </div>
+
+          <div class="card">
+            <label>Caps</label>
+            <div id="capsInfo"></div>
+          </div>
+
+          <div class="card">
             <label>Recent Catch</label>
             <div id="recentCatch">Nothing yet.</div>
           </div>
@@ -60,6 +70,11 @@
           <div class="card">
             <label>Global Rarity Table</label>
             <ul id="rarityList" class="rarity-list"></ul>
+          </div>
+
+          <div class="card">
+            <label>Fish Dex Snapshot</label>
+            <div id="dexInfo"></div>
           </div>
 
           <div class="card">
@@ -73,10 +88,27 @@
           </div>
         </aside>
       </main>
+    </div>
 
-      <audio id="ambientAudio" loop preload="none"></audio>
-      <audio id="deepAudio" loop preload="none"></audio>
-      <audio id="rareAudio" preload="none"></audio>
+    <div id="changelogModal" class="modal">
+      <div class="modal-content">
+        <h2>Deepwell Update Notes</h2>
+        <div id="changelogStatus" class="status-line"></div>
+        <div id="changelogContainer" class="changelog-list"></div>
+        <label class="check"><input type="checkbox" id="dontShowVersion" /> Don't show again for this version</label>
+        <button id="closeChangelogBtn" class="primary">Close</button>
+      </div>
+    </div>
+
+    <div id="rodModal" class="modal">
+      <div class="modal-content">
+        <h2>Rod Shop</h2>
+        <div id="rodShopContent"></div>
+        <div class="modal-actions">
+          <button id="buyRodBtn" class="primary">Buy</button>
+          <button id="closeRodShopBtn" class="ghost">Close</button>
+        </div>
+      </div>
     </div>
 
     <script src="script.js"></script>
