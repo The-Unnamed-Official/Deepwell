@@ -7,148 +7,63 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="app" class="zone-shallows">
-      <div class="ambient-lines" aria-hidden="true"></div>
-      <div class="dashboard-grid">
-        <aside class="column left-column etched-panel">
-          <section class="stack-panel plated" id="playerPanel">
-            <div class="panel-title">Player Console</div>
-            <div class="player-name">Abyss Diver</div>
-            <div class="currency-row"><span class="coin">◉</span><span id="currency">₵ 0</span></div>
-            <div class="sub-currencies">Tokens <strong id="tokenValue">0</strong> · Relics <strong id="relicValue">0</strong></div>
-            <div class="mini-stat">Session Earned <strong id="sessionEarned">₵ 0</strong></div>
-          </section>
+    <div id="app" class="biome-shallows">
+      <header class="top-strip panel">
+        <div>₵ <span id="currency">0</span></div>
+        <div>Rod: <span id="rodName">Starter Reed</span></div>
+        <div>Luck: <span id="luckValue">0</span>%</div>
+        <div>Biome: <span id="biomeLabel">Shallows</span></div>
+      </header>
 
-          <section class="stack-panel plated" id="rodPanel">
-            <div class="panel-title">Rod Assembly</div>
-            <div id="rodInfo"></div>
-            <div class="rod-gauges">
-              <div class="gauge"><span>Max Depth</span><div class="meter"><div id="rodDepthGauge"></div></div><strong id="rodDepthValue">0m</strong></div>
-              <div class="gauge"><span>Depth Speed</span><div class="dial"><div id="rodSpeedDial"></div></div><strong id="rodSpeedValue">0 m/s</strong></div>
-              <div class="gauge"><span>Reel Stability</span><div class="meter"><div id="rodStabilityGauge"></div></div><strong id="rodStabilityValue">0%</strong></div>
+      <main class="main-layout">
+        <section class="water-shell panel" id="waterShell">
+          <div class="depth-markings" id="depthMarks"></div>
+          <div class="water-container" id="waterContainer">
+            <div class="surface-ripple"></div>
+            <div class="particles" id="particles"></div>
+            <div class="control-zone" id="controlZone"></div>
+            <div class="energy-line" id="energyLine"></div>
+            <div class="fish-shadow" id="fishShadow"></div>
+            <div class="hook-node" id="hookNode">
+              <div class="tension-ring" id="tensionRing"></div>
             </div>
-            <div id="rodPassives" class="chip-row"></div>
-            <button id="openRodShopBtn" class="ghost">Rods</button>
-          </section>
+            <div class="water-vignette"></div>
+            <div class="water-message" id="waterMessage">Hold inside the well to cast.</div>
+          </div>
+        </section>
 
-          <section class="stack-panel plated" id="buffPanel">
-            <div class="panel-title">Buff Matrix</div>
-            <div class="cap-block">
-              <label>Luck Effectiveness</label>
-              <div class="meter"><div id="luckMeter"></div></div>
-              <small id="luckInfo">0</small>
-            </div>
-            <div class="cap-block">
-              <label>Mutation Bonus</label>
-              <div class="meter"><div id="mutationMeter"></div></div>
-              <small id="capsInfo"></small>
-            </div>
-            <div id="eventInfo" class="chip-row"></div>
-          </section>
-        </aside>
-
-        <main class="column center-column etched-panel">
-          <section class="depth-head plated">
-            <div class="depth-gauge-wrap">
-              <div class="depth-meter"><div id="depthFill"></div></div>
-              <div class="depth-needle" id="depthNeedle"></div>
-              <div class="depth-markers" id="depthMarkers"></div>
-            </div>
-            <div class="depth-readout">
-              <div class="label">Depth</div>
-              <div id="depthValue">0m</div>
-            </div>
-          </section>
-
-          <section class="biome-banner plated">
-            <div class="biome-emblem" id="biomeEmblem">◈</div>
-            <div>
-              <strong id="zoneLabel">Shallows</strong>
-              <p id="biomeInfo">Calm surface water</p>
-            </div>
-            <div class="pressure-widget">Pressure <span id="pressureValue">00%</span></div>
-          </section>
-
-          <section class="well-panel plated">
-            <div class="well-view" id="fishingContainer">
-              <div class="depth-overlay"></div>
-              <div class="depth-particles" id="depthParticles"></div>
-              <div id="rodCharacter" class="rod-character"></div>
-              <div class="line" id="line"></div>
-              <div class="hook" id="hook"></div>
-              <div class="splash" id="splash"></div>
-              <div class="bite-overlay" id="biteOverlay">BITE</div>
-              <div class="charge-ring" id="chargeRing">
-                <div class="charge-ring-inner" id="chargeRingInner"></div>
-              </div>
-              <div class="fishing-overlay" id="fishingOverlay">
-                <div id="phaseInfo">Hold inside water to charge cast.</div>
-                <div class="cast-meter" id="castMeter"><div id="castPowerFill"></div><div id="castSweetSpot"></div><div id="castMarker"></div></div>
-                <div id="castInfo" class="catch-sub">Release in sweet spot for +2% cast luck.</div>
-                <div class="bite-meter"><div id="biteWindowFill"></div></div>
-                <div id="biteInfo" class="catch-sub">Wait for a bite cue, then tap inside water.</div>
-                <div class="tension-wrap" id="tensionWrap"><div class="tension-bar" id="tensionBar"></div><div class="safe-zone" id="safeZone"></div><div class="fish-indicator" id="fishIndicator"></div></div>
-                <div id="tensionInfo" class="catch-sub">Hold/release anywhere in water to control tension.</div>
-              </div>
-            </div>
-          </section>
-
-          <section class="minigame-console plated">
-            <div class="controls">
-              <label class="check inline-check"><input type="checkbox" id="focusedModeToggle" /> Focused Reeling Mode (+15% value)</label>
-            </div>
-            <div class="catch-sub">Fishing input: interact directly inside the water panel only.</div>
-          </section>
-        </main>
-
-        <aside class="column right-column etched-panel">
-          <section class="stack-panel plated recent-catch">
-            <div class="panel-title">Recent Catch</div>
+        <aside class="side-panel panel">
+          <section>
+            <h3>Recent Catch</h3>
             <div id="recentCatch">Nothing yet.</div>
           </section>
-
-          <section class="stack-panel plated">
-            <div class="panel-title">Catch Log</div>
-            <div id="catchLog" class="catch-log"></div>
-          </section>
-
-          <section class="stack-panel plated">
-            <div class="quick-tabs">
-              <button class="ghost quick-tab active" data-tab="dex">Dex</button>
-              <button class="ghost quick-tab" data-tab="sell">Sell</button>
-              <button class="ghost quick-tab" data-tab="market">Market</button>
-            </div>
-            <div id="quickTabBody" class="quick-tab-body"></div>
+          <section>
+            <h3>Event Log</h3>
+            <div id="eventLog" class="event-log"></div>
           </section>
         </aside>
-      </div>
+      </main>
 
-      <button id="changelogBtn" class="version-plate">v0.0.0 <span id="versionNewGem" class="new-gem hidden">NEW</span></button>
-    </div>
+      <footer class="bottom-strip panel">
+        <div id="stateText">Idle · Hold to Cast</div>
+        <div class="sonar" id="sonar"></div>
+      </footer>
 
-    <div id="changelogModal" class="modal">
-      <div class="modal-content changelog-shell">
-        <div class="drawer-head">
-          <div><h2>Deepwell Updates</h2><div id="changelogStatus" class="status-line"></div></div>
-          <button id="closeChangelogBtn" class="ghost">Close</button>
-        </div>
-        <div id="changelogTabs" class="changelog-tabs"></div>
-        <div id="changelogContainer" class="changelog-list"></div>
-        <div class="page-controls">
-          <button id="changePrev" class="ghost">◀</button>
-          <span id="changePage">1/1</span>
-          <button id="changeNext" class="ghost">▶</button>
-        </div>
-      </div>
-    </div>
+      <button class="version-plate" id="versionPlate">v<span id="versionText"></span><span id="versionDot" class="dot hidden"></span></button>
 
-    <div id="rodModal" class="modal">
-      <div class="modal-content">
-        <h2>Rods Overlay</h2>
-        <div id="rodShopContent"></div>
-        <div class="modal-actions">
-          <button id="buyRodBtn" class="primary">Buy</button>
-          <button id="closeRodShopBtn" class="ghost">Close</button>
+      <div class="overlay" id="changelogOverlay">
+        <div class="overlay-card panel">
+          <div class="overlay-head">
+            <h2>Changelog</h2>
+            <button id="closeChangelog">Close</button>
+          </div>
+          <div class="tabs" id="changelogTabs"></div>
+          <div id="changelogBody"></div>
+          <div class="pager">
+            <button id="prevPage">Prev</button>
+            <span id="pageInfo">1/1</span>
+            <button id="nextPage">Next</button>
+          </div>
         </div>
       </div>
     </div>
