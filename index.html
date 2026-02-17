@@ -7,71 +7,65 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="app" class="zone-shallow">
-      <header class="topbar">
-        <h1>Deepwell</h1>
-        <div class="economy">
-          <span id="currency">₵ 0</span>
-          <button id="sellAllBtn" class="ghost">Sell Catch</button>
-        </div>
+    <div id="app" class="biome-shallows">
+      <header class="top-strip panel">
+        <div>₵ <span id="currency">0</span></div>
+        <div>Rod: <span id="rodName">Starter Reed</span></div>
+        <div>Luck: <span id="luckValue">0</span>%</div>
+        <div>Biome: <span id="biomeLabel">Shallows</span></div>
       </header>
 
       <main class="main-layout">
-        <section class="well-panel">
-          <div class="well-view">
-            <div class="depth-overlay"></div>
-            <div class="depth-particles" id="depthParticles"></div>
-            <div class="line" id="line"></div>
-            <div class="hook" id="hook"></div>
-            <div class="zone-label" id="zoneLabel">Shallow Waters</div>
-          </div>
-          <div class="controls">
-            <button id="castBtn" class="primary">Cast</button>
-            <button id="reelBtn" class="secondary" disabled>Reel In</button>
-            <button id="upgradeRodBtn" class="ghost">Upgrade Rod</button>
-            <button id="upgradeLuckBtn" class="ghost">Increase Luck</button>
+        <section class="water-shell panel" id="waterShell">
+          <div class="depth-markings" id="depthMarks"></div>
+          <div class="water-container" id="waterContainer">
+            <div class="surface-ripple"></div>
+            <div class="particles" id="particles"></div>
+            <div class="control-zone" id="controlZone"></div>
+            <div class="energy-line" id="energyLine"></div>
+            <div class="fish-shadow" id="fishShadow"></div>
+            <div class="hook-node" id="hookNode">
+              <div class="tension-ring" id="tensionRing"></div>
+            </div>
+            <div class="water-vignette"></div>
+            <div class="water-message" id="waterMessage">Hold inside the well to cast.</div>
           </div>
         </section>
 
-        <aside class="hud">
-          <div class="card depth-meter-card">
-            <label>Depth</label>
-            <div class="depth-meter">
-              <div id="depthFill"></div>
-            </div>
-            <div class="depth-readout"><span id="depthValue">0m</span></div>
-          </div>
-
-          <div class="card">
-            <label>Rod</label>
-            <div id="rodInfo"></div>
-          </div>
-
-          <div class="card">
-            <label>Luck</label>
-            <div id="luckInfo">0</div>
-          </div>
-
-          <div class="card">
-            <label>Recent Catch</label>
+        <aside class="side-panel panel">
+          <section>
+            <h3>Recent Catch</h3>
             <div id="recentCatch">Nothing yet.</div>
-          </div>
-
-          <div class="card">
-            <label>Stats</label>
-            <ul id="stats"></ul>
-          </div>
-
-          <div class="card" id="eventCard">
-            <label>Depth Event</label>
-            <div id="eventInfo">None active.</div>
-          </div>
+          </section>
+          <section>
+            <h3>Event Log</h3>
+            <div id="eventLog" class="event-log"></div>
+          </section>
         </aside>
       </main>
 
-      <audio id="ambientAudio" loop preload="none"></audio>
-      <audio id="deepAudio" loop preload="none"></audio>
-      <audio id="rareAudio" preload="none"></audio>
+      <footer class="bottom-strip panel">
+        <div id="stateText">Idle · Hold to Cast</div>
+        <div class="sonar" id="sonar"></div>
+      </footer>
+
+      <button class="version-plate" id="versionPlate">v<span id="versionText"></span><span id="versionDot" class="dot hidden"></span></button>
+
+      <div class="overlay" id="changelogOverlay">
+        <div class="overlay-card panel">
+          <div class="overlay-head">
+            <h2>Changelog</h2>
+            <button id="closeChangelog">Close</button>
+          </div>
+          <div class="tabs" id="changelogTabs"></div>
+          <div id="changelogBody"></div>
+          <div class="pager">
+            <button id="prevPage">Prev</button>
+            <span id="pageInfo">1/1</span>
+            <button id="nextPage">Next</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="script.js"></script>
