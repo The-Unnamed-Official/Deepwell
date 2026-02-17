@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deepwell</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app" class="zone-shallow">
+      <header class="topbar">
+        <h1>Deepwell</h1>
+        <div class="economy">
+          <span id="currency">₵ 0</span>
+          <button id="sellAllBtn" class="ghost">Sell Catch</button>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section class="well-panel">
+          <div class="well-view">
+            <div class="depth-overlay"></div>
+            <div class="depth-particles" id="depthParticles"></div>
+            <div class="line" id="line"></div>
+            <div class="hook" id="hook"></div>
+            <div class="zone-label" id="zoneLabel">Shallow Waters</div>
+          </div>
+          <div class="controls">
+            <button id="castBtn" class="primary">Cast</button>
+            <button id="reelBtn" class="secondary" disabled>Reel In</button>
+            <button id="upgradeRodBtn" class="ghost">Upgrade Rod</button>
+            <button id="upgradeLuckBtn" class="ghost">Increase Luck</button>
+          </div>
+        </section>
+
+        <aside class="hud">
+          <div class="card depth-meter-card">
+            <label>Depth</label>
+            <div class="depth-meter">
+              <div id="depthFill"></div>
+            </div>
+            <div class="depth-readout"><span id="depthValue">0m</span></div>
+          </div>
+
+          <div class="card">
+            <label>Rod</label>
+            <div id="rodInfo"></div>
+          </div>
+
+          <div class="card">
+            <label>Luck</label>
+            <div id="luckInfo">0</div>
+          </div>
+
+          <div class="card">
+            <label>Recent Catch</label>
+            <div id="recentCatch">Nothing yet.</div>
+          </div>
+
+          <div class="card">
+            <label>Stats</label>
+            <ul id="stats"></ul>
+          </div>
+
+          <div class="card" id="eventCard">
+            <label>Depth Event</label>
+            <div id="eventInfo">None active.</div>
+          </div>
+        </aside>
+      </main>
+
+      <audio id="ambientAudio" loop preload="none"></audio>
+      <audio id="deepAudio" loop preload="none"></audio>
+      <audio id="rareAudio" preload="none"></audio>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
