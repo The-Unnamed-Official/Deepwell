@@ -115,6 +115,10 @@ const state = {
   lastSeenVersion: "",
   fishDex: {},
   focusedMode: false,
+  quickTab: "dex",
+  catchLog: [],
+  changelogTab: "Added",
+  changelogPage: 0,
   castData: { power: 0, marker: 0, markerDir: 1, sweetHit: false, zone: "Weak", depthBonus: 0, backlash: 1, tempLuckBonus: 0 },
   fishing: { phase: PHASES.idle, biteWindow: 0, biteTimer: 0, biteElapsed: 0, descensionSpeed: 0, pendingFish: null, fightProgress: 0, fishPos: 0.5, fishVel: 0.2, fishTimer: 0, tension: 0.44, inputHeld: false, cleanEligible: false, mistakes: 0, maxTensionSeen: 0 },
   stats: {
@@ -132,27 +136,39 @@ const $ = (id) => document.getElementById(id);
 const app = $("app");
 const castBtn = $("castBtn");
 const reelBtn = $("reelBtn");
-const sellAllBtn = $("sellAllBtn");
 const openRodShopBtn = $("openRodShopBtn");
 const focusedModeToggle = $("focusedModeToggle");
 const depthFill = $("depthFill");
+const depthNeedle = $("depthNeedle");
+const depthMarkers = $("depthMarkers");
 const depthValue = $("depthValue");
 const rodInfo = $("rodInfo");
+const rodPassives = $("rodPassives");
+const rodDepthGauge = $("rodDepthGauge");
+const rodSpeedDial = $("rodSpeedDial");
+const rodStabilityGauge = $("rodStabilityGauge");
+const rodDepthValue = $("rodDepthValue");
+const rodSpeedValue = $("rodSpeedValue");
+const rodStabilityValue = $("rodStabilityValue");
+const luckMeter = $("luckMeter");
+const mutationMeter = $("mutationMeter");
 const luckInfo = $("luckInfo");
 const recentCatch = $("recentCatch");
-const statsList = $("stats");
+const catchLog = $("catchLog");
 const currency = $("currency");
+const sessionEarned = $("sessionEarned");
 const line = $("line");
 const hook = $("hook");
 const splash = $("splash");
 const rodCharacter = $("rodCharacter");
 const zoneLabel = $("zoneLabel");
+const biomeEmblem = $("biomeEmblem");
 const eventInfo = $("eventInfo");
-const rarityList = $("rarityList");
 const biomeInfo = $("biomeInfo");
+const pressureValue = $("pressureValue");
 const capsInfo = $("capsInfo");
-const dexInfo = $("dexInfo");
 const changelogBtn = $("changelogBtn");
+const versionNewGem = $("versionNewGem");
 const phaseInfo = $("phaseInfo");
 const castPowerFill = $("castPowerFill");
 const castMarker = $("castMarker");
@@ -168,8 +184,13 @@ const fishIndicator = $("fishIndicator");
 const changelogModal = $("changelogModal");
 const changelogStatus = $("changelogStatus");
 const changelogContainer = $("changelogContainer");
+const changelogTabs = $("changelogTabs");
+const changePrev = $("changePrev");
+const changeNext = $("changeNext");
+const changePage = $("changePage");
 const closeChangelogBtn = $("closeChangelogBtn");
-const dontShowVersion = $("dontShowVersion");
+const quickTabBody = $("quickTabBody");
+const quickTabs = document.querySelectorAll(".quick-tab");
 
 const rodModal = $("rodModal");
 const rodShopContent = $("rodShopContent");
@@ -198,6 +219,7 @@ function loadSave() {
     state.lastSeenVersion = typeof data.lastSeenVersion === "string" ? data.lastSeenVersion : "";
     state.focusedMode = Boolean(data.focusedMode);
     state.fishDex = data.fishDex && typeof data.fishDex === "object" ? data.fishDex : {};
+    state.catchLog = Array.isArray(data.catchLog) ? data.catchLog.slice(0, 6) : [];
     if (data.stats && typeof data.stats === "object") {
       state.stats = { ...state.stats, ...data.stats, mutationCounts: data.stats.mutationCounts && typeof data.stats.mutationCounts === "object" ? data.stats.mutationCounts : {} };
     }
@@ -207,7 +229,7 @@ function loadSave() {
 }
 
 function saveGame() {
-  const data = { currency: state.currency, luck: state.luck, rodIndex: state.rodIndex, lastSeenVersion: state.lastSeenVersion, fishDex: state.fishDex, stats: state.stats, focusedMode: state.focusedMode };
+  const data = { currency: state.currency, luck: state.luck, rodIndex: state.rodIndex, lastSeenVersion: state.lastSeenVersion, fishDex: state.fishDex, stats: state.stats, focusedMode: state.focusedMode, catchLog: state.catchLog };
   localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
 
@@ -215,23 +237,43 @@ function semverToTuple(v) { return String(v || "0.0.0").split(".").map((part) =>
 function isVersionGreater(a, b) { const [am, ai, ap] = semverToTuple(a); const [bm, bi, bp] = semverToTuple(b); if (am !== bm) return am > bm; if (ai !== bi) return ai > bi; return ap > bp; }
 function entriesSinceVersion(version) { if (!version) return changelogEntries.filter((entry) => entry.version === GAME_VERSION); return changelogEntries.filter((entry) => isVersionGreater(entry.version, version)); }
 
-function openChangelog(auto = false) {
-  const unseenEntries = entriesSinceVersion(state.lastSeenVersion);
-  const entries = auto ? unseenEntries : changelogEntries;
-  changelogStatus.innerHTML = auto ? `<span class="badge">NEW VERSION!</span> v${GAME_VERSION}` : `Deepwell changelog · current v${GAME_VERSION}`;
-  changelogContainer.innerHTML = entries.map((entry) => {
-    const sections = Object.entries(entry.sections).map(([section, notes]) => `<details open><summary>${section}</summary><ul>${notes.map((note) => `<li>${note}</li>`).join("")}</ul></details>`).join("");
-    return `<article class="entry"><h3>${entry.title}</h3><div class="entry-meta">v${entry.version} · ${entry.date}</div>${sections}</article>`;
-  }).join("");
-  changelogModal.classList.add("show");
+function renderChangelogTabs() {
+  const sections = ["Added", "Changed", "Fixed", "Balance"];
+  changelogTabs.innerHTML = sections.map((section) => `<button class="ghost ${state.changelogTab === section ? "active" : ""}" data-change-tab="${section}">${section}</button>`).join("");
+  changelogTabs.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.changelogTab = btn.dataset.changeTab;
+      state.changelogPage = 0;
+      renderChangelogPage();
+    });
+  });
 }
 
-function closeChangelog(markSeen = true) {
+function renderChangelogPage() {
+  const entries = changelogEntries.filter((entry) => entry.sections[state.changelogTab]);
+  const allItems = entries.flatMap((entry) => entry.sections[state.changelogTab].map((note) => ({ note, entry })));
+  const pageSize = 6;
+  const totalPages = Math.max(1, Math.ceil(allItems.length / pageSize));
+  state.changelogPage = clamp(state.changelogPage, 0, totalPages - 1);
+  const pageItems = allItems.slice(state.changelogPage * pageSize, state.changelogPage * pageSize + pageSize);
+  changelogContainer.innerHTML = pageItems.map(({ note, entry }) => `<article class="entry"><h3>${entry.title}</h3><div class="entry-meta">v${entry.version} · ${entry.date}</div><p>${note}</p></article>`).join("");
+  changePage.textContent = `${state.changelogPage + 1}/${totalPages}`;
+}
+
+function openChangelog(auto = false) {
+  changelogStatus.textContent = auto ? `NEW VERSION · v${GAME_VERSION}` : `Current Version v${GAME_VERSION}`;
+  state.changelogTab = "Added";
+  state.changelogPage = 0;
+  renderChangelogTabs();
+  renderChangelogPage();
+  changelogModal.classList.add("show");
+  state.lastSeenVersion = GAME_VERSION;
+  versionNewGem.classList.add("hidden");
+  saveGame();
+}
+
+function closeChangelog() {
   changelogModal.classList.remove("show");
-  if (markSeen || dontShowVersion.checked) {
-    state.lastSeenVersion = GAME_VERSION;
-    saveGame();
-  }
 }
 
 function getLuckEffectiveness() {
@@ -419,6 +461,7 @@ function failBite(type) {
 
   const reason = type === "false" ? "False hook!" : "Too late!";
   recentCatch.innerHTML = `<div class="catch-name">${reason}</div><div class="catch-sub">Something ${pendingTier.name} slipped away…</div><div class="catch-sub">Depth: ${depth.toLocaleString()}m</div><div class="catch-sub">Stay focused and try again.</div>`;
+  addCatchLog(`${reason} · ${pendingTier.name} escaped`, pendingTier.key);
 }
 
 function startFightPhase() {
@@ -474,6 +517,7 @@ function completeCatch() {
   const cleanText = cleanBonus > 1 ? `<div class="catch-sub">Clean Catch Bonus: +5% value</div>` : "";
   const focusText = state.focusedMode ? `<div class="catch-sub">Focused Reeling Bonus: +15% value</div>` : "";
   recentCatch.innerHTML = `<div class="catch-name">${catchItem.name}</div><div><span class="rarity-${catchItem.key}">${catchItem.tier}</span> – ${formatOdds(tier.odds)}</div><div class="catch-sub">Mutation: ${catchItem.mutation} ${catchItem.mutationKey === "none" ? "" : `– ${catchItem.mutationOddsText}`}</div><div class="catch-sub">Depth: ${catchItem.depthReached.toLocaleString()}m · Biome: ${catchItem.biome}</div>${cleanText}${focusText}`;
+  addCatchLog(`${catchItem.name} +₵${catchItem.value.toLocaleString()}`, catchItem.key);
 
   resetToIdle();
   saveGame();
@@ -482,6 +526,7 @@ function completeCatch() {
 function loseFight(reason) {
   const pendingTier = state.fishing.pendingFish?.tier || rarityTiers[0];
   recentCatch.innerHTML = `<div class="catch-name">${reason}</div><div class="catch-sub">Something ${pendingTier.name} slipped away…</div><div class="catch-sub">Depth: ${Math.floor(state.maxDepthReached).toLocaleString()}m</div><div class="catch-sub">Retry and keep tension centered.</div>`;
+  addCatchLog(`${reason}`, pendingTier.key);
   state.fishing.cleanEligible = false;
   resetToIdle();
 }
@@ -506,7 +551,30 @@ function sellAll() {
   state.stats.bestSingleSell = Math.max(state.stats.bestSingleSell, total);
   state.catches = [];
   recentCatch.textContent = `Sold haul for ₵ ${total.toLocaleString()}. Cast again.`;
+  addCatchLog(`Sold basket +₵${total.toLocaleString()}`, "uncommon");
   saveGame();
+}
+
+function addCatchLog(text, rarity = "common") {
+  state.catchLog.unshift({ text, rarity });
+  state.catchLog = state.catchLog.slice(0, 6);
+}
+
+function renderQuickTab() {
+  quickTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === state.quickTab));
+  if (state.quickTab === "dex") {
+    const entries = Object.entries(state.fishDex);
+    quickTabBody.innerHTML = entries.length
+      ? entries.slice(0, 6).map(([name, data]) => `<div>${name} · ${data.catches} caught</div>`).join("")
+      : "<div>No fish logged yet.</div>";
+  } else if (state.quickTab === "sell") {
+    const basket = state.catches.slice(0, 8).map((fish) => `<div>${fish.name} · ₵ ${fish.value.toLocaleString()}</div>`).join("");
+    quickTabBody.innerHTML = `<button id="sellAllBtn" class="primary">Sell All</button>${basket || "<div>Basket empty.</div>"}`;
+    const sellButton = $("sellAllBtn");
+    if (sellButton) sellButton.addEventListener("click", sellAll);
+  } else {
+    quickTabBody.innerHTML = "<div>Market telemetry online.</div><div>Buy/sell pricing lens coming soon.</div>";
+  }
 }
 
 function updateZone() {
@@ -514,50 +582,43 @@ function updateZone() {
   app.classList.remove("zone-shallows", "zone-kelp", "zone-twilight", "zone-lantern", "zone-trench", "zone-voidwell");
   app.classList.add(biome.className);
   zoneLabel.textContent = biome.title;
-  biomeInfo.textContent = `${biome.title} · ${biome.ambience}`;
-}
-
-function renderRarityGuide() {
-  const depthForGuide = Math.max(state.maxDepthReached, state.depth);
-  const eligible = getDepthEligibleTiers(depthForGuide).map((t) => t.key);
-  rarityList.innerHTML = rarityTiers.filter((tier) => !tier.hidden).map((tier) => {
-    const lock = eligible.includes(tier.key) ? "" : " 🔒";
-    return `<li><div><span class="rarity-${tier.key}">${tier.name}</span> · ${formatOdds(tier.odds)}${lock}</div></li>`;
-  }).join("");
-}
-
-function renderDex() {
-  const entries = Object.entries(state.fishDex);
-  if (!entries.length) { dexInfo.innerHTML = "No fish logged yet."; return; }
-  dexInfo.innerHTML = entries.slice(0, 6).map(([name, data]) => {
-    const bestMutation = mutationTable.find((m) => m.key === data.bestMutation)?.name || "None";
-    return `<div>${name} · best mutation: ${bestMutation}</div>`;
-  }).join("");
+  biomeInfo.textContent = biome.ambience;
+  biomeEmblem.textContent = ["◈", "✶", "◉", "⬢", "⬣", "✹"][biomes.findIndex((b) => b.key === biome.key)] || "◈";
 }
 
 function render() {
   const rod = currentRod();
+  const globalMaxDepth = rods[rods.length - 1].maxDepth;
   currency.textContent = `₵ ${Math.floor(state.currency).toLocaleString()}`;
-  luckInfo.textContent = `${state.luck} base · effective cap ${Math.round(getLuckEffectiveness() * 100)}%`;
-  rodInfo.innerHTML = `${rod.name}<br><small>DepthSpeed ${rod.depthSpeed} m/s · Max ${rod.maxDepth}m</small><br><small>${rod.passives.join(" · ")}</small>`;
-  capsInfo.textContent = "Caps: Safe zone +20%, reaction window +30%, fish speed slow -20%, luck +20%.";
+  sessionEarned.textContent = `₵ ${Math.floor(state.stats.totalCurrencyEarned).toLocaleString()}`;
+  luckInfo.textContent = `${Math.round(getLuckEffectiveness() * 100)}% / ${Math.round(LUCK_EFFECTIVENESS_CAP * 100)}% cap`;
+  capsInfo.textContent = `${Math.round(getMutationRelativeBonus() * 100)}% / ${Math.round(MUTATION_RELATIVE_CAP * 100)}% cap`;
+  luckMeter.style.width = `${(getLuckEffectiveness() / LUCK_EFFECTIVENESS_CAP) * 100}%`;
+  mutationMeter.style.width = `${(getMutationRelativeBonus() / MUTATION_RELATIVE_CAP) * 100}%`;
+
+  rodInfo.innerHTML = `<strong>${rod.name}</strong><br><small>Tier ${state.rodIndex + 1} assembly</small>`;
+  rodPassives.innerHTML = rod.passives.map((passive) => `<span class="chip" title="Passive effect">${passive}</span>`).join("");
+  rodDepthGauge.style.width = `${(rod.maxDepth / globalMaxDepth) * 100}%`;
+  rodSpeedDial.style.width = `${(rod.depthSpeed / rods[rods.length - 1].depthSpeed) * 100}%`;
+  rodStabilityGauge.style.width = `${(getTensionStability() / 0.2) * 100}%`;
+  rodDepthValue.textContent = `${rod.maxDepth}m`;
+  rodSpeedValue.textContent = `${rod.depthSpeed.toFixed(1)} m/s`;
+  rodStabilityValue.textContent = `${Math.round(getTensionStability() * 100)}%`;
 
   depthValue.textContent = `${Math.floor(state.depth)}m`;
-  const globalMaxDepth = rods[rods.length - 1].maxDepth;
   const meterHeight = clamp((state.depth / globalMaxDepth) * 100, 0, 100);
   depthFill.style.height = `${meterHeight}%`;
+  depthNeedle.style.top = `${100 - meterHeight}%`;
   line.style.height = `${meterHeight}%`;
   hook.style.top = `${clamp(4 + meterHeight, 4, 98)}%`;
+  pressureValue.textContent = `${Math.round((state.depth / globalMaxDepth) * 100).toString().padStart(2, "0")}%`;
 
-  statsList.innerHTML = [
-    `Deepest cast: ${Math.floor(state.stats.deepestCast)}m`,
-    `Rarest catch: ${state.stats.rarestCatch}`,
-    `Total fish: ${state.stats.totalFishCaught}`,
-    `Total earnings: ₵ ${Math.floor(state.stats.totalCurrencyEarned).toLocaleString()}`,
-    `Total Shiny catches: ${state.stats.mutationCounts.shiny || 0}`,
-    `Rarest mutation: ${state.stats.rarestMutation}`,
-    `Best single sell value: ₵ ${Math.floor(state.stats.bestSingleSell).toLocaleString()}`,
-  ].map((item) => `<li>${item}</li>`).join("");
+  depthMarkers.innerHTML = biomes.map((biome) => {
+    const pos = clamp((biome.min / globalMaxDepth) * 100, 0, 100);
+    return `<span style="position:absolute;left:6px;right:6px;top:${100 - pos}%;height:1px;background:rgba(190,220,245,0.2)"></span>`;
+  }).join("");
+
+  catchLog.innerHTML = state.catchLog.map((item, idx) => `<div class="log-pill rarity-${item.rarity}" style="opacity:${1 - idx * 0.1}">${item.text}</div>`).join("") || "<div class='catch-sub'>No events yet.</div>";
 
   focusedModeToggle.checked = state.focusedMode;
   castPowerFill.style.width = `${(state.castData.power * 100).toFixed(1)}%`;
@@ -571,26 +632,25 @@ function render() {
   if (state.fishing.phase === PHASES.idle) {
     phaseInfo.textContent = "Hold cast to charge.";
     biteWindowFill.style.width = "0%";
-    biteInfo.textContent = "Wait for a bite cue.";
-    tensionInfo.textContent = "Hook a fish to start.";
+    biteInfo.textContent = "Sonar idle. Awaiting contact.";
+    tensionInfo.textContent = "Pressure stabilizer idle.";
   } else if (state.fishing.phase === PHASES.charging) {
     phaseInfo.textContent = `Charging: ${Math.round(state.castData.power * 100)}% (${state.castData.zone})`;
     castInfo.textContent = state.castData.sweetHit ? "Sweet spot ready (+2% cast luck)." : "Release in sweet spot for +2% cast luck.";
   } else if (state.fishing.phase === PHASES.waiting) {
-    phaseInfo.textContent = `Waiting at ${Math.floor(state.depth)}m — stay ready.`;
+    phaseInfo.textContent = `Waiting at ${Math.floor(state.depth)}m — sonar pinging.`;
     biteInfo.textContent = "Click too early causes a false hook.";
   } else if (state.fishing.phase === PHASES.bite) {
-    phaseInfo.textContent = "Fish biting! Click quickly!";
+    phaseInfo.textContent = "BITE SIGNATURE DETECTED";
     biteWindowFill.style.width = `${(1 - state.fishing.biteElapsed / state.fishing.biteWindow) * 100}%`;
     biteInfo.textContent = `Reaction window: ${state.fishing.biteWindow.toFixed(2)}s`;
   } else if (state.fishing.phase === PHASES.fight) {
-    phaseInfo.textContent = "Tension fight active.";
+    phaseInfo.textContent = "LINE STRAIN ACTIVE";
     tensionInfo.textContent = `Progress ${(state.fishing.fightProgress * 100).toFixed(0)}% · Tension ${(state.fishing.tension * 100).toFixed(0)}%`;
   }
 
-  eventInfo.textContent = `Current version: v${GAME_VERSION} · Focused mode ${state.focusedMode ? "ON" : "OFF"}.`;
-  renderRarityGuide();
-  renderDex();
+  eventInfo.innerHTML = `<span class="chip">Focused ${state.focusedMode ? "ON" : "OFF"}</span><span class="chip">Biome bias active</span>`;
+  renderQuickTab();
   updateZone();
 }
 
@@ -683,11 +743,13 @@ castBtn.addEventListener("touchstart", holdCastStart, { passive: false });
 window.addEventListener("mouseup", holdCastEnd);
 window.addEventListener("touchend", holdCastEnd, { passive: false });
 reelBtn.addEventListener("click", onReelAction);
-sellAllBtn.addEventListener("click", sellAll);
 openRodShopBtn.addEventListener("click", openRodShop);
 focusedModeToggle.addEventListener("change", () => { state.focusedMode = focusedModeToggle.checked; saveGame(); });
 changelogBtn.addEventListener("click", () => openChangelog(false));
-closeChangelogBtn.addEventListener("click", () => closeChangelog(true));
+closeChangelogBtn.addEventListener("click", () => closeChangelog());
+changePrev.addEventListener("click", () => { state.changelogPage -= 1; renderChangelogPage(); });
+changeNext.addEventListener("click", () => { state.changelogPage += 1; renderChangelogPage(); });
+quickTabs.forEach((tab) => tab.addEventListener("click", () => { state.quickTab = tab.dataset.tab; renderQuickTab(); }));
 closeRodShopBtn.addEventListener("click", () => rodModal.classList.remove("show"));
 buyRodBtn.addEventListener("click", buyNextRod);
 
@@ -731,12 +793,14 @@ function buyNextRod() {
   state.currency -= next.price;
   state.rodIndex += 1;
   recentCatch.textContent = `${next.name} equipped.`;
+  addCatchLog(`${next.name} equipped`, "rare");
   saveGame();
   rodModal.classList.remove("show");
 }
 
 loadSave();
+changelogBtn.firstChild.textContent = `v${GAME_VERSION} `;
+if (state.lastSeenVersion !== GAME_VERSION) versionNewGem.classList.remove("hidden");
 render();
-if (state.lastSeenVersion !== GAME_VERSION) openChangelog(true);
 frame = requestAnimationFrame(updateLoop);
 window.addEventListener("beforeunload", saveGame);
