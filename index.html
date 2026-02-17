@@ -22,14 +22,17 @@
           <div class="well-view">
             <div class="depth-overlay"></div>
             <div class="depth-particles" id="depthParticles"></div>
+            <div id="rodCharacter" class="rod-character"></div>
             <div class="line" id="line"></div>
             <div class="hook" id="hook"></div>
+            <div class="splash" id="splash"></div>
             <div class="zone-label" id="zoneLabel">Shallows</div>
           </div>
           <div class="controls">
-            <button id="castBtn" class="primary">Cast</button>
-            <button id="reelBtn" class="secondary" disabled>Reel In</button>
+            <button id="castBtn" class="primary">Hold to Cast</button>
+            <button id="reelBtn" class="secondary" disabled>Hook / Reel</button>
             <button id="openRodShopBtn" class="ghost">Rod Shop</button>
+            <label class="check inline-check"><input type="checkbox" id="focusedModeToggle" /> Focused Reeling Mode (+15% value)</label>
           </div>
         </section>
 
@@ -40,6 +43,29 @@
               <div id="depthFill"></div>
             </div>
             <div class="depth-readout"><span id="depthValue">0m</span></div>
+          </div>
+
+          <div class="card phase-card">
+            <label>Fishing Phase</label>
+            <div id="phaseInfo">Hold cast to charge.</div>
+            <div class="cast-meter" id="castMeter">
+              <div id="castPowerFill"></div>
+              <div id="castSweetSpot"></div>
+              <div id="castMarker"></div>
+            </div>
+            <div id="castInfo" class="catch-sub">Release in the sweet spot for +2% cast luck.</div>
+            <div class="bite-meter"><div id="biteWindowFill"></div></div>
+            <div id="biteInfo" class="catch-sub">Wait for a bite cue.</div>
+          </div>
+
+          <div class="card minigame-card">
+            <label>Tension Fight</label>
+            <div class="tension-wrap" id="tensionWrap">
+              <div class="tension-bar" id="tensionBar"></div>
+              <div class="safe-zone" id="safeZone"></div>
+              <div class="fish-indicator" id="fishIndicator"></div>
+            </div>
+            <div id="tensionInfo" class="catch-sub">Hook a fish to start.</div>
           </div>
 
           <div class="card">
