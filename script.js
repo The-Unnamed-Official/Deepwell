@@ -1,57 +1,68 @@
-const depthTiers = [
+const rarityTiers = [
   {
     name: "Common",
     key: "common",
-    min: 0,
-    max: 100,
-    weight: 0.55,
+    minDepth: 0,
+    odds: 2,
     value: [8, 16],
-    fish: ["Silver Minnow", "Well Carp", "Pebble Pike"],
+    fish: ["Pebblefin", "Rustscale", "Mud Carp", "Drift Minnow", "Well Guppy"],
   },
   {
     name: "Uncommon",
     key: "uncommon",
-    min: 100,
-    max: 300,
-    weight: 0.25,
-    value: [22, 44],
-    fish: ["Blue Lantern Eel", "Glassfin", "Drift Koi"],
+    minDepth: 100,
+    odds: 5,
+    value: [24, 44],
+    fish: ["Silver Dart", "Mossback Eel", "Ripple Trout", "Bluegill Shade", "Hollow Perch"],
   },
   {
     name: "Rare",
     key: "rare",
-    min: 300,
-    max: 700,
-    weight: 0.12,
-    value: [70, 130],
-    fish: ["Starscale Ray", "Moonbarb", "Needle Shark"],
+    minDepth: 300,
+    odds: 15,
+    value: [72, 130],
+    fish: ["Deep Pike", "Lantern Koi", "Blackwater Bass", "Ironjaw Catfish", "Veil Snapper"],
   },
   {
     name: "Epic",
     key: "epic",
-    min: 700,
-    max: 1500,
-    weight: 0.055,
+    minDepth: 700,
+    odds: 75,
     value: [220, 380],
-    fish: ["Aether Sturgeon", "Dusk Leviathan", "Cathedral Eel"],
+    fish: ["Glowfin Serpent", "Abyss Runner", "Shardscale Levi", "Phantom Ray", "Obsidian Koi"],
   },
   {
     name: "Legendary",
     key: "legendary",
-    min: 1500,
-    max: 3000,
-    weight: 0.02,
+    minDepth: 1500,
+    odds: 400,
     value: [700, 1200],
-    fish: ["Sunken Crownfish", "Throne Seraph", "Ancient Hollowscale"],
+    fish: ["Crowned Angler", "Depth Tyrant", "Voidfin Monarch", "Ancient Wellkeeper", "Midnight Hydra"],
   },
   {
     name: "Mythic",
     key: "mythic",
-    min: 3000,
-    max: Infinity,
-    weight: 0.005,
+    minDepth: 3000,
+    odds: 2000,
     value: [2100, 4200],
-    fish: ["Phantom Abyssal", "Void Oracle", "Secret Witness"],
+    fish: ["Celestial Leviathan", "Starbound Eel", "Gravity Wyrm", "Oracle of the Deep", "The Gilded Maw"],
+  },
+  {
+    name: "Abyssal",
+    key: "abyssal",
+    minDepth: 3000,
+    odds: 25000,
+    value: [7000, 14000],
+    fish: ["The Nameless One", "Primordial Echo", "Wellheart Entity", "The Silent Colossus", "Deepwell Core"],
+  },
+  {
+    name: "??? Tier",
+    key: "unknown",
+    minDepth: 5000,
+    odds: 1000000,
+    value: [50000, 50000],
+    fish: ["The Endless Below"],
+    hidden: true,
   },
 ];
 
@@ -130,9 +141,13 @@ const state = {
     rarestCatch: "None",
     totalFishCaught: 0,
     totalCurrencyEarned: 0,
+    abyssalCaught: 0,
+    unlockedAbyssalBadge: false,
+    unknownCaught: 0,
   },
   activeEvent: null,
   eventTimer: 0,
+  globalAnnouncement: "",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -153,6 +168,7 @@ const line = $("line");
 const hook = $("hook");
 const zoneLabel = $("zoneLabel");
 const eventInfo = $("eventInfo");
+const rarityList = $("rarityList");
 
 let frame = null;
 let lastTick = performance.now();
@@ -165,93 +181,117 @@ function randRange([min, max]) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function formatOdds(odds) {
+  return `1 in ${odds.toLocaleString()}`;
+}
+
 function currentRod() {
   return rods[state.rodIndex];
 }
 
 function getDepthEligibleTiers(depth) {
-  return depthTiers.filter((tier) => depth >= tier.min);
+  return rarityTiers.filter((tier) => depth >= tier.minDepth);
 }
 
 function getRarityRank(key) {
-  return depthTiers.findIndex((tier) => tier.key === key);
+  return rarityTiers.findIndex((tier) => tier.key === key);
 }
 
-function maybeTriggerEvent() {
-  if (state.activeEvent || Math.random() > 0.11) {
+function getLuckImprovement() {
+  const effectiveLuck = state.luck + currentRod().luckBonus;
+  return clamp(effectiveLuck * 0.02, 0, 0.2);
+}
+
+function rollTier(depth) {
+  const eligibleTiers = getDepthEligibleTiers(depth)
+    .filter((tier) => tier.key !== "common")
+    .sort((a, b) => b.odds - a.odds);
+
+  const luckImprovement = getLuckImprovement();
+
+  for (const tier of eligibleTiers) {
+    const adjustedOdds = Math.max(1, Math.round(tier.odds * (1 - luckImprovement)));
+    if (Math.random() < 1 / adjustedOdds) {
+      return { tier, luckImprovement, adjustedOdds };
+    }
+  }
+
+  const commonTier = rarityTiers[0];
+  const commonOdds = Math.max(1, Math.round(commonTier.odds * (1 - luckImprovement)));
+  return { tier: commonTier, luckImprovement, adjustedOdds: commonOdds };
+}
+
+function triggerAbyssalEffects() {
+  app.classList.add("abyssal-distortion");
+  setTimeout(() => app.classList.remove("abyssal-distortion"), 1500);
+
+  app.animate(
+    [
+      { transform: "translateX(0) scale(1)", filter: "brightness(1)" },
+      { transform: "translateX(-6px) scale(1.01)", filter: "brightness(1.4)" },
+      { transform: "translateX(6px) scale(1.01)", filter: "brightness(1.2)" },
+      { transform: "translateX(0) scale(1)", filter: "brightness(1)" },
+    ],
+    { duration: 1200, easing: "ease-out" }
+  );
+
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) {
     return;
   }
 
-  const roll = Math.random();
-  if (roll < 0.45) {
-    state.activeEvent = { type: "Depth Surge", duration: 18 };
-  } else if (roll < 0.85) {
-    state.activeEvent = { type: "Echo Pull", duration: 1 };
-  } else {
-    state.activeEvent = { type: "Phantom Fish", duration: 1 };
-  }
-
-  state.eventTimer = state.activeEvent.duration;
-}
-
-function chooseTier(depth) {
-  const tiers = getDepthEligibleTiers(depth);
-  const rod = currentRod();
-  const effectiveLuck = state.luck + rod.luckBonus;
-
-  const adjusted = tiers.map((tier, i) => {
-    const depthFactor = clamp((depth - tier.min) / 1000, 0, 1.6);
-    const luckFactor = 1 + effectiveLuck * 0.025 * (i + 1);
-    let weight = tier.weight * (1 + depthFactor) * luckFactor;
-
-    if (state.activeEvent?.type === "Depth Surge") {
-      weight *= 1 + i * 0.2;
-    }
-
-    return { tier, weight };
-  });
-
-  if (state.activeEvent?.type === "Echo Pull" && tiers.length > 1) {
-    adjusted[adjusted.length - 1].weight *= 2;
-  }
-
-  const total = adjusted.reduce((sum, t) => sum + t.weight, 0);
-  let roll = Math.random() * total;
-
-  for (const item of adjusted) {
-    roll -= item.weight;
-    if (roll <= 0) {
-      return item.tier;
-    }
-  }
-
-  return tiers[0];
+  const context = new AudioCtx();
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = "sawtooth";
+  oscillator.frequency.setValueAtTime(60, context.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(20, context.currentTime + 1.3);
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.15, context.currentTime + 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 1.4);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + 1.4);
 }
 
 function catchFish() {
-  maybeTriggerEvent();
-
-  let tier;
-  if (state.activeEvent?.type === "Phantom Fish" && Math.random() < 0.18) {
-    tier = depthTiers[depthTiers.length - 1];
-  } else {
-    tier = chooseTier(state.maxDepthReached);
-  }
+  const depthReached = Math.floor(state.maxDepthReached);
+  const { tier, luckImprovement, adjustedOdds } = rollTier(state.maxDepthReached);
 
   const name = tier.fish[Math.floor(Math.random() * tier.fish.length)];
   let value = randRange(tier.value);
-  let flags = [];
+  const flags = [];
 
   if (Math.random() < 0.06) {
     value *= 2;
     flags.push("Golden Catch");
   }
 
-  if (state.activeEvent?.type === "Phantom Fish") {
-    flags.push("Phantom");
+  const catchItem = {
+    name,
+    tier: tier.name,
+    key: tier.key,
+    value,
+    flags,
+    oddsText: formatOdds(tier.odds),
+    adjustedOddsText: formatOdds(adjustedOdds),
+    depthReached,
+    luckApplied: Math.round(luckImprovement * 100),
+  };
+
+  if (tier.key === "abyssal") {
+    state.stats.abyssalCaught += 1;
+    state.stats.unlockedAbyssalBadge = true;
+    flags.push("Abyssal Signature");
+    triggerAbyssalEffects();
   }
 
-  const catchItem = { name, tier: tier.name, key: tier.key, value, flags };
+  if (tier.key === "unknown") {
+    state.stats.unknownCaught += 1;
+    state.globalAnnouncement = "SERVER ALERT: The Endless Below has emerged at 5000m+!";
+  }
+
   state.catches.push(catchItem);
   state.stats.totalFishCaught += 1;
 
@@ -265,18 +305,18 @@ function catchFish() {
     state.stats.rarestCatch = catchItem.tier;
   }
 
-  const flagText = flags.length ? ` (${flags.join(", ")})` : "";
-  recentCatch.innerHTML = `<span class="rarity-${catchItem.key}">${catchItem.tier}</span> · ${catchItem.name} · ₵ ${catchItem.value}${flagText}`;
+  const flagText = flags.length ? `<div class="catch-flags">${flags.join(" · ")}</div>` : "";
 
-  if (["epic", "legendary", "mythic"].includes(catchItem.key)) {
+  recentCatch.innerHTML = `
+    <div class="catch-name">${catchItem.name}</div>
+    <div><span class="rarity-${catchItem.key}">${catchItem.tier}</span> – ${catchItem.oddsText}</div>
+    <div class="catch-sub">Depth reached: ${catchItem.depthReached.toLocaleString()}m</div>
+    <div class="catch-sub">Luck applied: +${catchItem.luckApplied}%</div>
+    ${flagText}
+  `;
+
+  if (["epic", "legendary", "mythic", "abyssal", "unknown"].includes(catchItem.key)) {
     pulseRareEffect();
-  }
-
-  if (state.activeEvent) {
-    state.eventTimer -= 1;
-    if (state.eventTimer <= 0) {
-      state.activeEvent = null;
-    }
   }
 
   render();
@@ -368,10 +408,22 @@ function updateZone() {
   zoneLabel.textContent = active.title;
 }
 
+function renderRarityGuide() {
+  rarityList.innerHTML = rarityTiers
+    .filter((tier) => !tier.hidden)
+    .map(
+      (tier) => `<li>
+        <div><span class="rarity-${tier.key}">${tier.name}</span> · ${formatOdds(tier.odds)}</div>
+        <small>${tier.fish.join(", ")}</small>
+      </li>`
+    )
+    .join("");
+}
+
 function render() {
   const rod = currentRod();
   currency.textContent = `₵ ${Math.floor(state.currency)}`;
-  luckInfo.textContent = `${state.luck} (+${rod.luckBonus} rod)`;
+  luckInfo.textContent = `${state.luck} (+${rod.luckBonus} rod) · cap ${Math.round(getLuckImprovement() * 100)}%`;
 
   const nextRod = rods[state.rodIndex + 1];
   const rodUpgradeText = nextRod ? `Upgrade: ₵ ${nextRod.price}` : "Max tier reached";
@@ -383,7 +435,7 @@ function render() {
 
   rodInfo.innerHTML = `${rod.name}<br><small>${rod.style}</small><br>Depth speed ${rod.castSpeed}/s · Max ${rod.maxDepth}m`;
 
-  const meterCap = Math.max(rod.maxDepth, 3500);
+  const meterCap = Math.max(rod.maxDepth, 5200);
   depthValue.textContent = `${Math.floor(state.depth)}m`;
   depthFill.style.height = `${(state.depth / meterCap) * 100}%`;
 
@@ -395,13 +447,20 @@ function render() {
     `Rarest catch: ${state.stats.rarestCatch}`,
     `Total fish: ${state.stats.totalFishCaught}`,
     `Total earnings: ₵ ${Math.floor(state.stats.totalCurrencyEarned)}`,
+    `Abyssal catches: ${state.stats.abyssalCaught}`,
+    `Abyssal badge: ${state.stats.unlockedAbyssalBadge ? "Unlocked" : "Locked"}`,
   ]
     .map((item) => `<li>${item}</li>`)
     .join("");
 
-  eventInfo.textContent = state.activeEvent ? `${state.activeEvent.type} active` : "None active.";
+  if (state.globalAnnouncement) {
+    eventInfo.textContent = state.globalAnnouncement;
+  } else {
+    eventInfo.textContent = "No global alerts.";
+  }
 
   updateZone();
+  renderRarityGuide();
 }
 
 function updateLoop(now) {
@@ -423,7 +482,6 @@ function updateLoop(now) {
     }
   }
 
-  // Optional idle mechanic at highest tier
   if (currentRod().idleUnlocked) {
     state.currency += 0.32 * delta;
     state.stats.totalCurrencyEarned += 0.32 * delta;
