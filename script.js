@@ -1,6 +1,25 @@
-const GAME_VERSION = "0.5.0";
+const GAME_VERSION = "0.6.0";
 
 const changelogEntries = [
+  {
+    version: "0.6.0",
+    date: "2026-02-17",
+    title: "Unified Fishing Container",
+    sections: {
+      Added: [
+        "Water panel is now the single fishing input surface for cast, bite reaction, and reeling.",
+        "Cursor charge ring, ripples, sweet-zone pulse, and bite flash overlays inside the container.",
+        "Tension warning microfeedback with line strain/slack cues and abyssal visual flicker.",
+      ],
+      Changed: [
+        "Removed split cast/reel button inputs from the minigame loop.",
+        "Hold/release anywhere in the water panel now controls pull/slack during fights.",
+      ],
+      Balance: [
+        "Higher rarity fish now surge and reverse more aggressively in the unified control flow.",
+      ],
+    },
+  },
   {
     version: "0.5.0",
     date: "2026-02-17",
@@ -120,7 +139,7 @@ const state = {
   changelogTab: "Added",
   changelogPage: 0,
   castData: { power: 0, marker: 0, markerDir: 1, sweetHit: false, zone: "Weak", depthBonus: 0, backlash: 1, tempLuckBonus: 0 },
-  fishing: { phase: PHASES.idle, biteWindow: 0, biteTimer: 0, biteElapsed: 0, descensionSpeed: 0, pendingFish: null, fightProgress: 0, fishPos: 0.5, fishVel: 0.2, fishTimer: 0, tension: 0.44, inputHeld: false, cleanEligible: false, mistakes: 0, maxTensionSeen: 0 },
+  fishing: { phase: PHASES.idle, biteWindow: 0, biteTimer: 0, biteElapsed: 0, descensionSpeed: 0, pendingFish: null, fightProgress: 0, fishPos: 0.5, fishVel: 0.2, fishTimer: 0, tension: 0.44, inputHeld: false, cleanEligible: false, mistakes: 0, maxTensionSeen: 0, warningBand: "none" },
   stats: {
     deepestCast: 0,
     rarestCatch: "None",
@@ -134,8 +153,10 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 const app = $("app");
-const castBtn = $("castBtn");
-const reelBtn = $("reelBtn");
+const fishingContainer = $("fishingContainer");
+const biteOverlay = $("biteOverlay");
+const chargeRing = $("chargeRing");
+const chargeRingInner = $("chargeRingInner");
 const openRodShopBtn = $("openRodShopBtn");
 const focusedModeToggle = $("focusedModeToggle");
 const depthFill = $("depthFill");
@@ -199,6 +220,7 @@ const buyRodBtn = $("buyRodBtn");
 
 let frame = null;
 let lastTick = performance.now();
+let activePointerId = null;
 
 function clamp(num, min, max) { return Math.max(min, Math.min(max, num)); }
 function randRange([min, max]) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -361,6 +383,28 @@ function trackDex(name, mutationKey) {
   if (newRank >= 0 && oldRank >= 0 && newRank < oldRank) state.fishDex[name].bestMutation = mutationKey;
 }
 
+function setChargeRingPosition(clientX, clientY) {
+  const rect = fishingContainer.getBoundingClientRect();
+  const x = clamp(clientX - rect.left, 0, rect.width);
+  const y = clamp(clientY - rect.top, 0, rect.height);
+  chargeRing.style.left = `${x}px`;
+  chargeRing.style.top = `${y}px`;
+  fishingContainer.style.setProperty("--cursor-x", `${(x / rect.width) * 100}%`);
+  fishingContainer.style.setProperty("--cursor-y", `${(y / rect.height) * 100}%`);
+}
+
+function pulseBiteOverlay() {
+  biteOverlay.classList.remove("show");
+  void biteOverlay.offsetWidth;
+  biteOverlay.classList.add("show");
+}
+
+function pulseChargeFeedback() {
+  fishingContainer.classList.remove("sweet-pulse");
+  void fishingContainer.offsetWidth;
+  fishingContainer.classList.add("sweet-pulse");
+}
+
 function evaluateCastZone(power) {
   if (power <= 0.3) return { zone: "Weak", depthBonus: 0, backlash: 1 };
   if (power <= 0.8) return { zone: "Good", depthBonus: 0.05, backlash: 1 };
@@ -376,7 +420,7 @@ function startCharge() {
   state.castData.markerDir = 1;
   state.castData.tempLuckBonus = 0;
   phaseInfo.textContent = "Charging cast power...";
-  castBtn.textContent = "Release to Throw";
+  chargeRing.classList.add("active");
 }
 
 function releaseCharge() {
@@ -397,6 +441,7 @@ function releaseCharge() {
   void splash.offsetWidth;
   splash.classList.add("show");
 
+  chargeRing.classList.remove("active", "sweet-zone");
   beginWaitingPhase();
 }
 
@@ -420,9 +465,7 @@ function beginWaitingPhase() {
   const delay = clamp(base * rodFactor * state.castData.backlash / biome.biteBias, 0.35, 3);
   state.fishing.biteTimer = delay;
 
-  castBtn.disabled = true;
-  reelBtn.disabled = false;
-  castBtn.textContent = "Hold to Cast";
+  state.fishing.inputHeld = false;
 }
 
 function triggerBite() {
@@ -435,6 +478,7 @@ function triggerBite() {
   state.fishing.biteElapsed = 0;
   state.fishing.phase = PHASES.bite;
   hook.classList.add("biting");
+  pulseBiteOverlay();
 }
 
 function onReelAction() {
@@ -442,9 +486,7 @@ function onReelAction() {
     failBite("false");
     return;
   }
-  if (state.fishing.phase === PHASES.bite) {
-    startFightPhase();
-  }
+  if (state.fishing.phase === PHASES.bite) startFightPhase();
 }
 
 function failBite(type) {
@@ -539,8 +581,10 @@ function resetToIdle() {
   state.maxDepthReached = 0;
   state.castData.tempLuckBonus = 0;
   hook.classList.remove("biting");
-  castBtn.disabled = false;
-  reelBtn.disabled = true;
+  chargeRing.classList.remove("active", "sweet-zone");
+  fishingContainer.classList.remove("abyssal-dim");
+  fishingContainer.dataset.soundCue = "none";
+  state.fishing.warningBand = "none";
 }
 
 function sellAll() {
@@ -623,6 +667,7 @@ function render() {
   focusedModeToggle.checked = state.focusedMode;
   castPowerFill.style.width = `${(state.castData.power * 100).toFixed(1)}%`;
   castMarker.style.left = `${(state.castData.marker * 100).toFixed(1)}%`;
+  chargeRingInner.style.setProperty("--charge", state.castData.power.toFixed(3));
 
   const safeWidth = clamp((0.2 + getMinigameSafeZoneBonus()) * 100, 8, 70);
   safeZone.style.width = `${safeWidth}%`;
@@ -630,7 +675,7 @@ function render() {
   fishIndicator.style.left = `${clamp(state.fishing.fishPos * 100, 1, 98)}%`;
 
   if (state.fishing.phase === PHASES.idle) {
-    phaseInfo.textContent = "Hold cast to charge.";
+    phaseInfo.textContent = "Hold inside water to charge cast.";
     biteWindowFill.style.width = "0%";
     biteInfo.textContent = "Sonar idle. Awaiting contact.";
     tensionInfo.textContent = "Pressure stabilizer idle.";
@@ -639,14 +684,14 @@ function render() {
     castInfo.textContent = state.castData.sweetHit ? "Sweet spot ready (+2% cast luck)." : "Release in sweet spot for +2% cast luck.";
   } else if (state.fishing.phase === PHASES.waiting) {
     phaseInfo.textContent = `Waiting at ${Math.floor(state.depth)}m — sonar pinging.`;
-    biteInfo.textContent = "Click too early causes a false hook.";
+    biteInfo.textContent = "Tap inside water when bite flashes.";
   } else if (state.fishing.phase === PHASES.bite) {
-    phaseInfo.textContent = "BITE SIGNATURE DETECTED";
+    phaseInfo.textContent = "BITE — Tap anywhere in water!";
     biteWindowFill.style.width = `${(1 - state.fishing.biteElapsed / state.fishing.biteWindow) * 100}%`;
     biteInfo.textContent = `Reaction window: ${state.fishing.biteWindow.toFixed(2)}s`;
   } else if (state.fishing.phase === PHASES.fight) {
     phaseInfo.textContent = "LINE STRAIN ACTIVE";
-    tensionInfo.textContent = `Progress ${(state.fishing.fightProgress * 100).toFixed(0)}% · Tension ${(state.fishing.tension * 100).toFixed(0)}%`;
+    tensionInfo.textContent = `Hold in water to pull · release for slack · Progress ${(state.fishing.fightProgress * 100).toFixed(0)}%`;
   }
 
   eventInfo.innerHTML = `<span class="chip">Focused ${state.focusedMode ? "ON" : "OFF"}</span><span class="chip">Biome bias active</span>`;
@@ -669,6 +714,10 @@ function updateLoop(now) {
       state.castData.marker = clamp(state.castData.marker, 0, 1);
       state.castData.markerDir *= -1;
     }
+    const inSweet = state.castData.marker >= 0.56 && state.castData.marker <= 0.68;
+    chargeRing.classList.toggle("sweet-zone", inSweet);
+    if (inSweet && !state.castData.sweetHit) pulseChargeFeedback();
+    state.castData.sweetHit = inSweet;
   }
 
   if (state.fishing.phase === PHASES.waiting) {
@@ -690,10 +739,12 @@ function updateLoop(now) {
     const focusedScale = state.focusedMode ? 1.22 : 1;
     const fishSpeed = tier.fishSpeed * (1 - getFishSpeedSlow()) * focusedScale;
     state.fishing.fishTimer += delta;
-    if (state.fishing.fishTimer >= 0.48) {
+    if (state.fishing.fishTimer >= 0.42) {
       state.fishing.fishTimer = 0;
-      if (Math.random() < (tier.key === "abyssal" ? 0.5 : 0.28)) state.fishing.fishVel *= -1;
-      state.fishing.fishVel += (Math.random() - 0.5) * 0.4;
+      if (Math.random() < (tier.key === "abyssal" ? 0.62 : tier.key === "mythic" ? 0.42 : 0.3)) state.fishing.fishVel *= -1;
+      state.fishing.fishVel += (Math.random() - 0.5) * (tier.key === "abyssal" ? 0.78 : 0.46);
+      if ((tier.key === "legendary" || tier.key === "mythic" || tier.key === "abyssal") && Math.random() < 0.2) state.fishing.fishVel *= -1;
+      if (Math.random() < (tier.key === "abyssal" ? 0.2 : 0.08)) state.fishing.tension = clamp(state.fishing.tension + 0.12, 0, 1);
     }
 
     state.fishing.fishPos += state.fishing.fishVel * fishSpeed * delta;
@@ -707,8 +758,8 @@ function updateLoop(now) {
     const safeMax = clamp(state.fishing.tension + safeWidth / 2, 0, 1);
     const fishInside = state.fishing.fishPos >= safeMin && state.fishing.fishPos <= safeMax;
 
-    const pullRate = 0.48;
-    const releaseRate = 0.36;
+    const pullRate = 0.36;
+    const releaseRate = 0.34;
     state.fishing.tension += (state.fishing.inputHeld ? pullRate : -releaseRate) * delta;
     state.fishing.tension += (fishInside ? -0.07 : 0.09) * delta;
     state.fishing.tension *= 1 - getTensionStability() * 0.2;
@@ -719,6 +770,19 @@ function updateLoop(now) {
     else state.fishing.fightProgress -= delta * 0.18;
     state.fishing.fightProgress = clamp(state.fishing.fightProgress, 0, 1);
 
+    const warningBand = state.fishing.tension > 0.8 ? "high" : state.fishing.tension < 0.2 ? "low" : "none";
+    if (warningBand !== state.fishing.warningBand) {
+      state.fishing.warningBand = warningBand;
+      fishingContainer.dataset.soundCue = warningBand;
+      if (warningBand !== "none") {
+        fishingContainer.classList.remove("warning-pop");
+        void fishingContainer.offsetWidth;
+        fishingContainer.classList.add("warning-pop");
+        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(20);
+      }
+    }
+    if (tier.key === "abyssal" && Math.random() < 0.02) fishingContainer.classList.toggle("abyssal-dim");
+
     if (state.fishing.tension >= 0.995) loseFight("Line snapped!");
     if (state.fishing.tension <= 0.005) loseFight("Fish escaped!");
     if (state.fishing.fightProgress >= 1) completeCatch();
@@ -728,21 +792,34 @@ function updateLoop(now) {
   frame = requestAnimationFrame(updateLoop);
 }
 
-function holdCastStart(e) {
+function containerPressStart(e) {
+  if (!fishingContainer.contains(e.target)) return;
+  if (activePointerId !== null) return;
+  activePointerId = e.pointerId;
+  setChargeRingPosition(e.clientX, e.clientY);
+
+  if (state.fishing.phase === PHASES.idle) startCharge();
+  else if (state.fishing.phase === PHASES.fight) state.fishing.inputHeld = true;
   e.preventDefault();
-  startCharge();
 }
 
-function holdCastEnd(e) {
-  e.preventDefault();
-  releaseCharge();
+function containerPressMove(e) {
+  if (e.pointerId !== activePointerId) return;
+  setChargeRingPosition(e.clientX, e.clientY);
 }
 
-castBtn.addEventListener("mousedown", holdCastStart);
-castBtn.addEventListener("touchstart", holdCastStart, { passive: false });
-window.addEventListener("mouseup", holdCastEnd);
-window.addEventListener("touchend", holdCastEnd, { passive: false });
-reelBtn.addEventListener("click", onReelAction);
+function containerPressEnd(e) {
+  if (e.pointerId !== activePointerId) return;
+  activePointerId = null;
+  if (state.fishing.phase === PHASES.charging) releaseCharge();
+  if (state.fishing.phase === PHASES.fight) state.fishing.inputHeld = false;
+  if (state.fishing.phase === PHASES.bite) onReelAction();
+}
+
+fishingContainer.addEventListener("pointerdown", containerPressStart);
+fishingContainer.addEventListener("pointermove", containerPressMove);
+window.addEventListener("pointerup", containerPressEnd);
+window.addEventListener("pointercancel", containerPressEnd);
 openRodShopBtn.addEventListener("click", openRodShop);
 focusedModeToggle.addEventListener("change", () => { state.focusedMode = focusedModeToggle.checked; saveGame(); });
 changelogBtn.addEventListener("click", () => openChangelog(false));
@@ -758,7 +835,7 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     if (state.fishing.phase === PHASES.idle) startCharge();
     else if (state.fishing.phase === PHASES.charging) releaseCharge();
-    else onReelAction();
+    else if (state.fishing.phase === PHASES.bite) onReelAction();
   }
   if (e.key.toLowerCase() === "f") state.fishing.inputHeld = true;
   if (e.key.toLowerCase() === "c") openChangelog(false);
@@ -767,10 +844,6 @@ window.addEventListener("keyup", (e) => {
   if (e.key.toLowerCase() === "f") state.fishing.inputHeld = false;
 });
 
-tensionWrap.addEventListener("mousedown", () => { state.fishing.inputHeld = true; });
-window.addEventListener("mouseup", () => { state.fishing.inputHeld = false; });
-window.addEventListener("touchstart", () => { if (state.fishing.phase === PHASES.fight) state.fishing.inputHeld = true; }, { passive: true });
-window.addEventListener("touchend", () => { state.fishing.inputHeld = false; }, { passive: true });
 
 function openRodShop() {
   const current = currentRod();

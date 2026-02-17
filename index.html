@@ -70,33 +70,34 @@
           </section>
 
           <section class="well-panel plated">
-            <div class="well-view">
+            <div class="well-view" id="fishingContainer">
               <div class="depth-overlay"></div>
               <div class="depth-particles" id="depthParticles"></div>
               <div id="rodCharacter" class="rod-character"></div>
               <div class="line" id="line"></div>
               <div class="hook" id="hook"></div>
               <div class="splash" id="splash"></div>
+              <div class="bite-overlay" id="biteOverlay">BITE</div>
+              <div class="charge-ring" id="chargeRing">
+                <div class="charge-ring-inner" id="chargeRingInner"></div>
+              </div>
+              <div class="fishing-overlay" id="fishingOverlay">
+                <div id="phaseInfo">Hold inside water to charge cast.</div>
+                <div class="cast-meter" id="castMeter"><div id="castPowerFill"></div><div id="castSweetSpot"></div><div id="castMarker"></div></div>
+                <div id="castInfo" class="catch-sub">Release in sweet spot for +2% cast luck.</div>
+                <div class="bite-meter"><div id="biteWindowFill"></div></div>
+                <div id="biteInfo" class="catch-sub">Wait for a bite cue, then tap inside water.</div>
+                <div class="tension-wrap" id="tensionWrap"><div class="tension-bar" id="tensionBar"></div><div class="safe-zone" id="safeZone"></div><div class="fish-indicator" id="fishIndicator"></div></div>
+                <div id="tensionInfo" class="catch-sub">Hold/release anywhere in water to control tension.</div>
+              </div>
             </div>
           </section>
 
           <section class="minigame-console plated">
             <div class="controls">
-              <button id="castBtn" class="primary">Hold to Cast</button>
-              <button id="reelBtn" class="secondary" disabled>Hook / Reel</button>
               <label class="check inline-check"><input type="checkbox" id="focusedModeToggle" /> Focused Reeling Mode (+15% value)</label>
             </div>
-            <div class="phase-card">
-              <div id="phaseInfo">Hold cast to charge.</div>
-              <div class="cast-meter" id="castMeter"><div id="castPowerFill"></div><div id="castSweetSpot"></div><div id="castMarker"></div></div>
-              <div id="castInfo" class="catch-sub">Release in the sweet spot for +2% cast luck.</div>
-              <div class="bite-meter"><div id="biteWindowFill"></div></div>
-              <div id="biteInfo" class="catch-sub">Wait for a bite cue.</div>
-            </div>
-            <div class="minigame-card">
-              <div class="tension-wrap" id="tensionWrap"><div class="tension-bar" id="tensionBar"></div><div class="safe-zone" id="safeZone"></div><div class="fish-indicator" id="fishIndicator"></div></div>
-              <div id="tensionInfo" class="catch-sub">Hook a fish to start.</div>
-            </div>
+            <div class="catch-sub">Fishing input: interact directly inside the water panel only.</div>
           </section>
         </main>
 
