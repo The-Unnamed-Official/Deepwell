@@ -21,6 +21,8 @@
 
 **Deepwell** is a pixel-art fishing game built for the web.
 
+Current release: **v0.8.1**
+
 Cast your line, master the reeling minigame, discover **120 real fish species**, and fill out your entire **Deepwell Journal**.
 
 </div>
