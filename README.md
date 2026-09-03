@@ -3,7 +3,7 @@
 <br>
 
 <img
-  src="https://capsule-render.vercel.app/api?type=transparent&height=130&text=DEEPWELL&fontColor=000000&fontSize=72&fontAlignY=52&animation=fadeIn"
+  src="https://capsule-render.vercel.app/api?type=transparent&height=130&text=DEEPWELL&fontColor=FFFFFF&fontSize=72&fontAlignY=52&animation=fadeIn"
   width="700"
   alt="Deepwell" />
 
